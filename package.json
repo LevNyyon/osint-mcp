@@ -1,0 +1,16 @@
+{
+  "name": "osint-mcp",
+  "version": "0.1.0",
+  "description": "MCP server to watch topics/brands across HN, Reddit, DuckDuckGo, Stack Overflow, GitHub — raw signal, your model reasons over it.",
+  "type": "module",
+  "bin": { "osint-mcp": "src/index.js" },
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node test.mjs"
+  },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0"
+  },
+  "license": "MIT"
+}
