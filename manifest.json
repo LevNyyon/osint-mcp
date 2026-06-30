@@ -2,7 +2,7 @@
   "manifest_version": "0.3",
   "name": "osint-mcp",
   "display_name": "OSINT MCP",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Watch topics, brands, competitors, and sites across the public web. Raw signal in, your model decides what matters.",
   "long_description": "A small MCP server that watches the topics, brands, competitors, or sites you care about across the open web and hands back the raw hits. No LLM, no ranking, no dashboard. Sources: Hacker News, Reddit, DuckDuckGo, Stack Overflow, GitHub Issues, and any site's RSS or Atom feed (keyless except an optional GitHub token). Save targets (a search phrase or a site url), then fetch_updates returns recent mentions and, by default, only what is new since the last fetch. The relevance score is a hint, not a verdict. The reasoning stays with the client's model.",
   "author": {
@@ -23,7 +23,8 @@
     { "name": "add_target", "description": "Save a watch: a search phrase (name) and/or a site url to follow via RSS/Atom." },
     { "name": "list_targets", "description": "List saved watches." },
     { "name": "remove_target", "description": "Remove a saved watch by name." },
-    { "name": "fetch_updates", "description": "Fetch recent hits for a target, all targets, or an ad hoc name/url. new_only returns just what is new since last fetch." }
+    { "name": "fetch_updates", "description": "Fetch recent hits for a target, all targets, or an ad hoc name/url. new_only returns just what is new since last fetch." },
+    { "name": "hot_takes", "description": "Fetch the latest signal AND return a keyless recipe (5 provocation lenses + the counter-argument) your model runs to write sharp, debatable hot takes. No LLM baked in." }
   ],
   "compatibility": {
     "platforms": ["darwin", "win32", "linux"],

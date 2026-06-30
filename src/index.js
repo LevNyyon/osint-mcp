@@ -4,7 +4,8 @@
 // hits back. No LLM, no scoring beyond a relevance hint — your model reasons
 // over the results.
 //
-// Tools: list_sources, list_targets, add_target, remove_target, fetch_updates.
+// Tools: list_sources, list_targets, add_target, remove_target, fetch_updates,
+// hot_takes (raw signal + a keyless recipe your model runs to write hot takes).
 
 import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
@@ -75,7 +76,46 @@ const TOOLS = [
       },
     },
   },
+  {
+    name: 'hot_takes',
+    description: 'Fetch the latest signal for a target/phrase/url (or all saved targets) AND return a ready-to-run recipe for turning that signal into sharp HOT TAKES. This server runs no LLM: it hands YOUR model the raw hits plus the instructions, and your model writes the takes. A hot take is a bold, specific, debatable opinion that takes a side, names the thing, and would make a smart reader want to argue. Not a summary, not a tip. Use when you want angles worth publishing, not just a list of links.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        target:        { type: 'string', description: 'Saved target name. Omit to use all saved targets.' },
+        name:          { type: 'string', description: 'Ad-hoc search phrase (no need to save a target).' },
+        url:           { type: 'string', description: 'Ad-hoc site/feed URL to watch directly (RSS/Atom).' },
+        domain:        { type: 'string' },
+        sources:       { type: 'array', items: { type: 'string', enum: Object.keys(SOURCES) }, description: 'Restrict to these sources. Default: all.' },
+        since_days:    { type: 'number', description: 'Only items within N days. Default 14.' },
+        min_confidence:{ type: 'number', description: 'Floor on the relevance hint 0..1. Default 0.4.' },
+        limit:         { type: 'number', description: 'Max items per target. Default 40.' },
+      },
+    },
+  },
 ];
+
+// The value layer, kept keyless: the server returns this recipe alongside the raw
+// signal so the CALLING model writes the takes. No opinion is baked into the MCP.
+const HOT_TAKE_RECIPE = `Turn the signals into a SHORT set of HOT TAKES.
+
+A HOT TAKE is a bold, specific, debatable OPINION that takes a side and makes a smart person stop and want to argue. It NAMES the thing (a company, a claim, a consensus). It says what most people will not. It is falsifiable or genuinely provocative.
+KILL anything that: hedges ("it depends"), gives a tip or how-to, just restates the news, or could be published by any brand without risk. If it is safe, cut it.
+
+Energy to match (not the subjects, just the spice level):
+- "Most AI agents shipping today are cron jobs in a trench coat."
+- "Perplexity raising 200M for a browser is a confession it cannot win search."
+- "AEO is a rebrand for the consultants who fumbled SEO."
+
+Work SEVERAL angles so the set is varied, not five versions of one idea:
+- CONTRARIAN: argue the opposite of what everyone agrees on.
+- PREDICTION: a falsifiable call on what happens next, and who specifically loses.
+- EMPEROR: call out the hype or theater the field pretends not to see.
+- UNSAID: the uncomfortable truth insiders know but will not post.
+- POWER MOVE: decode what a specific company move REALLY reveals (fear, retreat, land-grab) versus its press-release framing.
+
+Generate candidates across those angles, then keep ONLY the 5-6 spiciest and most DISTINCT. Each must take a clear side. No en-dashes or em-dashes.
+For each, give: take (one sharp declarative sentence), argument (2-3 sentences), why_now (the trigger), counter (the strongest argument AGAINST it, because a real hot take knows its opposition), and the source url(s) it draws on.`;
 
 async function fetchForTarget(t, opts) {
   const sinceMs = opts.since_days != null ? Date.now() - opts.since_days * 864e5 : Date.now() - 14 * 864e5;
@@ -122,7 +162,7 @@ async function handleFetch(args) {
 }
 
 // ── server ───────────────────────────────────────────────────
-const server = new Server({ name: 'osint-mcp', version: '0.1.0' }, { capabilities: { tools: {} } });
+const server = new Server({ name: 'osint-mcp', version: '0.2.0' }, { capabilities: { tools: {} } });
 server.setRequestHandler(ListToolsRequestSchema, async () => ({ tools: TOOLS }));
 server.setRequestHandler(CallToolRequestSchema, async (req) => {
   const { name, arguments: args = {} } = req.params;
@@ -156,6 +196,15 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
       }
       case 'fetch_updates':
         return ok(await handleFetch(args));
+      case 'hot_takes': {
+        // Take the freshest signal (not just unseen), then hand the model the recipe.
+        const signal = await handleFetch({ ...args, new_only: false });
+        return ok({
+          recipe: HOT_TAKE_RECIPE,
+          signals: signal,
+          note: 'osint-mcp runs no LLM. Feed `signals` to your model together with `recipe` to write the hot takes.',
+        });
+      }
       default:
         throw new Error(`unknown tool ${name}`);
     }

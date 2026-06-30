@@ -59,6 +59,7 @@ Targets and the "already seen" set persist as JSON in `OSINT_MCP_DIR` (default
 | `list_targets` | your saved watches |
 | `remove_target` | drop one by name |
 | `fetch_updates` | pull recent hits for one target, all targets, or an ad hoc `name` / `url`. Returns `{ source, url, text, posted_at, confidence }`. `new_only` (default true) returns only items unseen on prior fetches, so repeat calls surface just what is new. |
+| `hot_takes` | fetch the latest signal AND return a keyless `recipe` your model runs to turn it into sharp, debatable hot takes (5 provocation lenses, each with its counter-argument). Still no LLM in the server: it hands your model the `signals` plus the `recipe`, your model writes the takes. |
 
 ### Typical flow
 
@@ -67,9 +68,10 @@ add_target { "name": "Anthropic", "domain": "anthropic.com" }   # watch the web
 add_target { "name": "answer engine optimization" }
 add_target { "url": "https://openai.com/blog" }                 # watch a site feed
 fetch_updates { "since_days": 7 }
+hot_takes { "name": "AI agents", "since_days": 7 }              # signal + recipe -> your model writes the takes
 ```
 
-The model then reads the hits and decides what is worth your attention.
+The model then reads the hits and decides what is worth your attention. `hot_takes` goes one step further: it hands your model the recipe to turn the raw signal into opinions worth publishing.
 
 "Watch a site for new posts" means give a `url`. It defaults to feed only, so it
 will not also search the web for the hostname. Repeat `fetch_updates` calls
